@@ -1,0 +1,15 @@
+route:
+  receiver: app-log
+  group_by: ['alertname', 'stage']
+  group_wait: 5s
+  group_interval: 30s
+  repeat_interval: 5m
+
+receivers:
+  # In production this would page Slack / email / PagerDuty. For the demo it
+  # posts back to the app, which logs every alert as structured JSON, so the
+  # alert lands in the same log stream as the failing messages.
+  - name: app-log
+    webhook_configs:
+      - url: http://app:8080/alerts
+        send_resolved: true
