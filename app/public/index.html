@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DataFlow - observability demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 15px; margin-top: 28px; color: #555; text-transform: uppercase; letter-spacing: .04em; }
+  button { font-size: 15px; padding: 10px 16px; margin: 4px 6px 4px 0; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; }
+  button:hover { background: #f2f2f2; }
+  button.danger { border-color: #d64545; color: #d64545; }
+  button.go { border-color: #2b8a3e; color: #2b8a3e; }
+  #out { background: #111; color: #9fe89f; font-family: ui-monospace, monospace; font-size: 13px; padding: 12px; border-radius: 8px; min-height: 60px; white-space: pre-wrap; margin-top: 16px; }
+  a { color: #2b6cb0; }
+  .links { margin-top: 28px; font-size: 15px; line-height: 1.9; }
+  code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>DataFlow &mdash; pipeline observability demo</h1>
+<p>Pipeline: <code>Consumer &rarr; Subscriber &rarr; Mapper &rarr; Transformer &rarr; Publisher &rarr; DB</code></p>
+
+<h2>Traffic</h2>
+<button class="go" onclick="call('POST','/message')">Send one message</button>
+<button class="go" onclick="call('POST','/traffic/on')">Start auto traffic</button>
+<button onclick="call('POST','/traffic/off')">Stop auto traffic</button>
+
+<h2>Inject a failure (watch Grafana + alerts find it)</h2>
+<button class="danger" onclick="call('POST','/fail/1_consumer?rate=1')">Break consumer</button>
+<button class="danger" onclick="call('POST','/fail/2_subscriber?rate=1')">Break subscriber</button>
+<button class="danger" onclick="call('POST','/fail/3_mapper?rate=1')">Break mapper</button>
+<button class="danger" onclick="call('POST','/fail/4_transformer?rate=1')">Break transformer</button>
+<button class="danger" onclick="call('POST','/fail/5_publisher?rate=1')">Break publisher</button>
+<button class="danger" onclick="call('POST','/fail/6_db_write?rate=1')">Break db_write</button>
+<br>
+<button class="danger" onclick="call('POST','/fail/4_transformer?rate=0.3')">Break transformer 30% (flaky)</button>
+<button onclick="call('POST','/fail-clear')">Fix everything</button>
+
+<div id="out">responses appear here</div>
+
+<div class="links">
+  <b>Dashboards and alerts</b><br>
+  Grafana: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a> &mdash; login <code>admin</code> / <code>admin</code>, dashboard "DataFlow / Pipeline observability"<br>
+  Prometheus (metrics + alert rules): <a href="http://localhost:9090/alerts" target="_blank">http://localhost:9090/alerts</a><br>
+  Alertmanager (firing alerts): <a href="http://localhost:9093" target="_blank">http://localhost:9093</a><br>
+  Metrics endpoint Prometheus scrapes: <a href="/metrics" target="_blank">/metrics</a>
+</div>
+
+<script>
+async function call(method, path) {
+  const out = document.getElementById('out');
+  try {
+    const res = await fetch(path, { method });
+    const body = await res.json();
+    out.textContent = JSON.stringify(body, null, 2);
+  } catch (e) {
+    out.textContent = 'request failed: ' + e.message;
+  }
+}
+</script>
+</body>
+</html>
