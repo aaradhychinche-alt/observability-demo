@@ -1,0 +1,14 @@
+{
+  "name": "dataflow-observability-demo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Step-level observability demo for a data pipeline: custom Prometheus metrics, alerts, message correlation IDs, Grafana dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "prom-client": "^15.1.3"
+  }
+}
