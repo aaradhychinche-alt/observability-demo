@@ -1,0 +1,57 @@
+groups:
+  - name: dataflow
+    rules:
+      # The app itself is unreachable - nothing is being scraped at all.
+      - alert: DataflowAppDown
+        expr: up{job="dataflow"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "DataFlow app is down - Prometheus cannot scrape it"
+
+      # One stage fails every message it sees: effectively down, and the
+      # alert names the stage so nobody has to guess.
+      - alert: DataflowStageDown
+        expr: |
+          sum by (stage) (rate(dataflow_stage_errors_total[2m]))
+            == sum by (stage) (rate(dataflow_stage_runs_total[2m]))
+          and sum by (stage) (rate(dataflow_stage_runs_total[2m])) > 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Stage {{ $labels.stage }} is failing 100% of messages"
+
+      # Error rate above 5% on any stage.
+      - alert: DataflowStageErrorRate
+        expr: |
+          sum by (stage) (rate(dataflow_stage_errors_total[2m]))
+            / sum by (stage) (rate(dataflow_stage_runs_total[2m])) > 0.05
+        for: 30s
+        labels:
+          severity: high
+        annotations:
+          summary: "Stage {{ $labels.stage }} error rate above 5%"
+
+      # Pipeline heartbeat: traffic has flowed before, but nothing is being
+      # processed now. Every service can look "up" while the pipeline is dead.
+      - alert: DataflowNoTraffic
+        expr: |
+          sum(rate(dataflow_messages_total[2m])) == 0
+          and sum(dataflow_messages_total) > 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "No messages processed for 2 minutes, but traffic is expected"
+
+      # End-to-end latency p95 above the pipeline's 750ms budget.
+      - alert: DataflowHighE2ELatency
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(dataflow_e2e_duration_seconds_bucket[5m]))) > 0.75
+        for: 1m
+        labels:
+          severity: medium
+        annotations:
+          summary: "End-to-end message latency p95 is above 750ms"
